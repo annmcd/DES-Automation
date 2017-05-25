@@ -1,8 +1,3 @@
-/***
-Purpose:	Pipeline and Job Creation for Microservice maven based projects
-Copyright:	<To be completed when on premise> March 2017
-Author:		Ann McDonald/DES
-**/
 
 import jenkins.model.*
 

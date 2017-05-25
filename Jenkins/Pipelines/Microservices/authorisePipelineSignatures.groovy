@@ -1,9 +1,4 @@
 
-/***
-Purpose:	Pre-Approve libs which are required on the microservices pipeline
-
-Author:		Ann McDonald/DES
-**/
 
  
 import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval;
