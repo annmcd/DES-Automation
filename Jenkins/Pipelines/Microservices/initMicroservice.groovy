@@ -1,5 +1,7 @@
 
+
 import jenkins.model.*
+
 
 
  Properties PROPS
@@ -23,7 +25,6 @@ import jenkins.model.*
 	else{
 		println "Error: No pipeline.properties File Present"
 		println System.getProperty("user.dir")
-		//doSendEmail()
 		return //1
 		
 	}
@@ -44,10 +45,10 @@ import jenkins.model.*
   
  
 
- /**def abortBuild = { String abortMessage ->
+	def abortBuild = { String abortMessage ->
     buildAborted = true
     error(abortMessage)
-  } **/
+  } 
   
   
 /*******Start of Job DSL Declare Microservice Job Configuration*******************/
@@ -70,7 +71,7 @@ import jenkins.model.*
 	  customWorkspace("${CUSTOM_WORKSPACE}")
       logRotator(28, 5, -1, -1)
       description("${PROPS.lbl_desc_scm}")
-     // label "${PROPS.targetSlave}"
+      label "${PROPS.targetSlave}"
       wrappers {
         preBuildCleanup();
 		timestamps()
@@ -105,7 +106,7 @@ import jenkins.model.*
   
       job("PullRequest-${ARTIFACT_ID}") {
         
-          //label "${PROPS.targetSlave}"
+          label "${PROPS.targetSlave}"
           description('Source code management for microservice PR build')
           logRotator(28, 10, -1, -1)
 			publishers {
@@ -153,7 +154,7 @@ import jenkins.model.*
 						 
             //jdk("${jdkVersion}") 
             customWorkspace("${CUSTOM_WORKSPACE}")
-            //label "${PROPS.targetSlave}"
+            label "${PROPS.targetSlave}"
             description("${PROPS.lbl_desc_worker}")
             logRotator(28, 10, -1, -1)
                         
@@ -166,7 +167,7 @@ import jenkins.model.*
                     runner('Fail')
                       steps {
 
-					    maven("clean compile -Pbugs-style-check -DfailFlag=${PROPS.const_fail_quality_check}")
+					    maven("clean compile -Pbugs-style-check  -Dmaven.test.skip=true -DfailFlag=${PROPS.const_fail_quality_check}")
         
                       }
                   }
@@ -214,7 +215,7 @@ import jenkins.model.*
                    runner('Fail')
                    steps {
 					
-						maven("-X deploy -Pdeploy-snapshot")  //package microservice as jar with a custom manifest
+						maven("deploy -Pdeploy-snapshot -Dmaven.test.skip=true ")  //package microservice as jar with a custom manifest
 					    
                   }
              }
@@ -329,6 +330,9 @@ import jenkins.model.*
             script("""
 				/**** Begin Stage Methods *********/
 				
+
+				import jenkins.model.*
+				
 				 res=true		
                  //fail the pipeline if checkout fails
                  def doCheckout(){
@@ -341,8 +345,7 @@ import jenkins.model.*
 				  }catch(e) {
 					 	res=false
 						//doSendEmail()
-						//abortBuild("checkout failed")
-						echo 'checkout failed'
+						currentBuild.result = "FAILURE"
 					  
 					  }
                     return res
@@ -374,15 +377,12 @@ import jenkins.model.*
 							  throw new Exception("Error: artifactId was entered as ${ARTIFACT_ID} it must match the artifactId in the projects pom.xml")
 						 }
 						
-						doClassify(groupId)
-						println "microservice jobs classifation done.........."
+					    doClassify(groupId)
+				
 					    }
 					  }catch(e){
 					 	res=false
-						//doSendEmail()
-						//abortBuild("unit tests failed")
-						
-					  
+						currentBuild.result = "FAILURE"
 					  }
 
 					return res
@@ -403,7 +403,8 @@ import jenkins.model.*
 					}catch(e) {
 						res=false
 						//doSendEmail()
-						//abortBuild("unit tests failed")
+						
+						
 					 }
 					 
 					 return res
@@ -424,8 +425,9 @@ import jenkins.model.*
                        }  
                   }catch(e) {
                         res=false
+						currentBuild.result = "FAILURE"
   						//doSendEmail()
-						//abortBuild("integration tests failed")
+						
                   }
 			
 					return res
@@ -468,7 +470,7 @@ import jenkins.model.*
                       }catch (e) {
 							res=false
 							//doSendEmail()
-							//abortBuild("Publishing of Reports Failed")
+							currentBuild.result = "FAILURE"
 							
                       }
                      
@@ -483,9 +485,9 @@ import jenkins.model.*
 				
 					try{
     
-						 stage("${PROPS.lbl_snapshot_deploy}") {
+						stage("${PROPS.lbl_snapshot_deploy}") {
 			
-							echo "about to package artefact & deploy as a snapshot"
+							echo "About to package artefact & deploy as a snapshot"
 							build job: "${ARTIFACT_ID}${PROPS.lbl_worker}", 
 										parameters: [string(name: 'TARGET_STEP',
 										value: 'deploy-snapshot')]
@@ -494,7 +496,8 @@ import jenkins.model.*
 					
 					    res=false
                         //doSendEmail()
-						//abortBuild("Snapshot Deploy Failed")
+						currentBuild.result = "FAILURE"
+						
 					}
 					
 					return res
@@ -507,13 +510,13 @@ import jenkins.model.*
                 def doDockerCompose() {
     
 					try{ 
-					   stage ("${PROPS.lbl_docker_compose}") {
+					    stage ("${PROPS.lbl_docker_compose}") {
 							echo "aout to create image of env"
 					   }	
 					 }catch(e) {
 						res=false
 						//doSendEmail()
-						//abortBuild("DockerCompose Failed to package environment")
+						 currentBuild.result = "FAILURE"
 
 					}	
 					
@@ -528,7 +531,7 @@ import jenkins.model.*
     
 					stage ("${PROPS.lbl_provision_environment}") {
     
-                      echo "about to provision microservice test environment "
+                      echo "About to provision microservice test environment "
 					}		
                 }
     
@@ -542,12 +545,12 @@ import jenkins.model.*
 	
 						stage ("${PROPS.lbl_run_at}") {
 
-							echo "about to run Acceptance Tests "
+							echo "About to run Acceptance Tests "
 						}		
 					  }catch(e){
 						res=false
-                      // doSendEmail()
-					   //abortBuild("acceptance tests failed")
+                        // doSendEmail()
+					   currentBuild.result = "FAILURE"
 					  }
 					  
 					  return res
@@ -562,7 +565,7 @@ import jenkins.model.*
 					try{ 
 						stage ("${PROPS.lbl_artefact_release}") {
 		
-						  echo "about to release artefact"
+						  echo "About to release artefact"
 
 						  build job: "${ARTIFACT_ID}${PROPS.lbl_worker}", 
 							parameters: [string(name: 'TARGET_STEP',
@@ -571,7 +574,8 @@ import jenkins.model.*
 					}catch(e) {
 						res=false
                       // doSendEmail()
-					   //abortBuild("artefact release failed")
+					  currentBuild.result = "FAILURE"
+					  
 					}
 					return res
                 }
@@ -584,7 +588,7 @@ import jenkins.model.*
 				
 					stage ("${PROPS.lbl_artefact_prune}") {
 					
-						echo "about to prune artefact"
+						echo "About to prune artefact"
 					}
 				}
     
@@ -595,7 +599,7 @@ import jenkins.model.*
     
 					stage ("${PROPS.lbl_chef_push}") {
 		
-						echo "about to push to CHEF Server"
+						echo "About to push to CHEF Server"
 					 }		
                  
                 }
@@ -605,13 +609,13 @@ import jenkins.model.*
     
                    try {
                         stage ("${PROPS.lbl_stash}") {
-							echo "about to notify stash"
+							echo "About to notify stash"
                         }		
                              
                     }catch (e) {
                         res=false
 						//doSendEmail()
-						//abortBuild("Stash Notification Failure")
+						currentBuild.result = "FAILURE"
                   }
 				  return res
                 }
@@ -626,7 +630,7 @@ import jenkins.model.*
     
                     stage ("${PROPS.lbl_sonar}") {
                       
-					echo "about to push to sonar"
+					echo "About to push to sonar"
                      build job: "${ARTIFACT_ID}${PROPS.lbl_worker}", 
 						parameters: [string(name: 'TARGET_STEP',
 						value: 'sonar')]
@@ -635,7 +639,7 @@ import jenkins.model.*
 				  }catch(e) {
 					 res=false
                     // doSendEmail()
-					// abortBuild("sonar push failure")
+					currentBuild.result = "FAILURE"
 				  }
 				  return res
 				  
@@ -652,47 +656,63 @@ import jenkins.model.*
 			Therefore we must classify the jobs related to each microservice post execution of the pipeline
 			and add them to a view named with the maven groupId of the project
 	      **/
-         def getUnclassifiedView(){
-            
-			 def ucView=null
-			 ucView= hudson.model.Hudson.getInstance().
-			 getView("${PROPS.lbl_unclassified}${ARTIFACT_ID}")
-                  
+		def getUnclassifiedView(){
+
+			def ucView=null
+			try{
+				println "determining if view exists:  ${PROPS.lbl_unclassified}${ARTIFACT_ID}"
+				 
+				//ucView= hudson.model.Hudson.getInstance().getView("${PROPS.lbl_unclassified}${ARTIFACT_ID}")
+			    ucView=Jenkins.instance.getView("${PROPS.lbl_unclassified}${ARTIFACT_ID}")
+				
+				}catch(e) {
+				  throw e
+				  currentBuild.result = "FAILURE"
+				}
            	 return ucView
          }
 
 
+
+	
 	     def getClassifiedView(groupId){
 
-               def classifiedView=null
-               classifiedView= hudson.model.Hudson.getInstance().
-               getView(groupId)
-                
-               return classifiedView
-             }
+             def classifiedView=null
+			 try{
+             //classifiedView= hudson.model.Hudson.getInstance().getView(groupId)
+             classifiedView = Jenkins.instance.getView(groupId)
+			 
+			 }catch(e) {
+				throw e
+				currentBuild.result = "FAILURE"
+			 }
+              return classifiedView
+          }
 
 
 
 
 	     def doClassify(groupId) {
+		
 
 			def ucView=getUnclassifiedView()
+			println "determining if classified view exists"
 			def classifiedView=getClassifiedView(groupId)
 			def bNoViews=false
-
+			
 			
 			//if classified view does not exist then create it
 			if(classifiedView ==null){ 
-				  println "classified view does not exist for the groupId,  create it"
+				 println "classified view does not exist for the groupId,  create it"
 	  
-				  def view = new ListView(groupId, Jenkins.instance)
+				   def view = new ListView(groupId, Jenkins.instance)
 				   Jenkins.instance.addView(view)
 				   Jenkins.instance.save()    
 			  }
 
 			//If the unclassified view exists add the jobs to the classified view and delete it
 			if (ucView != null) {
-				  println "unclassified view scheduled for deletion, jobs will be moved to the classified view, represented by the project groupId."
+				 println "unclassified view scheduled for deletion, jobs will be moved to the classified view, represented by the project groupId."
 			   
 				  //copy all projects of a view
 				  for(item in ucView.getItems() ) {
@@ -713,12 +733,6 @@ import jenkins.model.*
 	     }
 
       
-	     //secure all jobs on the view represented by groupId according to the security template defined for microservices
-	     def doSecure(){
-		 
-			println "about to validate security on this microservices jobs"
-	   
-	     }
 
 		def doSendEmail() {
         
@@ -741,17 +755,13 @@ import jenkins.model.*
 	   node("${PROPS.targetSlave}") {
 				
 	      doCheckout()
-	      //def result = doCompile()
-		  doCompile()
-	      // result = doUnitTests()
-		 
-		  doUnitTests()
-	      //result = doIntegrationTests()
-		  doIntegrationTests()
+	  	  doCompile()
+	      resultUT = doUnitTests()
+	      resultIT = doIntegrationTests()
 	      doPublishReports() //publish reports regardless
 	    
 
-	    // if (result==true) {
+	     if (resultUT==true && resultIT==true) {
 			  doSnapshotDeploy()
 			  doDockerCompose()
 			  doProvisionEnv()
@@ -760,10 +770,14 @@ import jenkins.model.*
 			  doPrune()
 			  doChefPush()
 			  doNotifyStash()
-		//  }	
+		  }else{
+			 prinltn "Both Integration and Unit Tests must succced"
+			 currentBuild.result = "FAILURE"
+			 //doSendEmail
+			 
+		  }
 			  doSonarPush()
-			  doSecure() //non staged step
-	    
+			  	    
        }   
           """.stripIndent())      
           }

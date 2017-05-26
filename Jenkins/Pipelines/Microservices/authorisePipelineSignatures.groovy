@@ -1,6 +1,5 @@
 
 
- 
 import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval;
 import org.jenkinsci.plugins.scriptsecurity.scripts.languages.GroovyLanguage;
 import org.jenkinsci.plugins.scriptsecurity.scripts.ApprovalContext;
